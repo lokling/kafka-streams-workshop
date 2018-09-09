@@ -36,7 +36,9 @@ public class Exercise_1_FilterAndTransform {
      * as a stream of ints
      */
     public void lineLengths(StreamsBuilder builder) {
-
+        builder.stream("text", Consumed.with(strings, strings))
+                .mapValues(line -> line.length())
+                .to("line-lengths", Produced.with(strings, ints));
     }
 
     /**
@@ -45,7 +47,9 @@ public class Exercise_1_FilterAndTransform {
      * stream of ints
      */
     public void wordsPerLine(StreamsBuilder builder) {
-
+        builder.stream("text", Consumed.with(strings, strings))
+                .mapValues(line -> line.split(" ").length)
+                .to("words-per-line", Produced.with(strings, ints));
     }
 
     /**
@@ -54,7 +58,9 @@ public class Exercise_1_FilterAndTransform {
      * 'contains-conference'
      */
     public void linesContainingConference(StreamsBuilder builder) {
-
+        builder.stream("text", Consumed.with(strings, strings))
+                .filter((key, line) -> line.contains("conference"))
+                .to("contains-conference", Produced.with(strings, strings));
     }
 
     /**
@@ -62,7 +68,9 @@ public class Exercise_1_FilterAndTransform {
      * send them individually to the topic 'all-the-words'
      */
     public void allTheWords(StreamsBuilder builder) {
-
+        builder.stream("text", Consumed.with(strings, strings))
+                .flatMapValues(line -> Arrays.asList(line.split(" ")))
+                .to("all-the-words", Produced.with(strings, strings));
     }
 
     /**
@@ -71,7 +79,9 @@ public class Exercise_1_FilterAndTransform {
      * and send the URL as a string to the topic 'urls-visited'
      */
     public void urlsVisited(StreamsBuilder builder) {
-
+        builder.stream("click-events", Consumed.with(strings, json))
+                .mapValues(json -> json.path("object").path("url").asText())
+                .to("urls-visited", Produced.with(strings, strings));
     }
 
     /**
@@ -81,7 +91,9 @@ public class Exercise_1_FilterAndTransform {
      * events unmodified to the topic 'articles' as json
      */
     public void articles(StreamsBuilder builder) {
-
+        builder.stream("click-events", Consumed.with(strings, json))
+                .filter((key, json) -> json.path("object").path("@type").asText().equals("Article"))
+                .to("articles", Produced.with(strings, json));
     }
 
     /**
@@ -90,7 +102,10 @@ public class Exercise_1_FilterAndTransform {
      * URLs to the topic 'article-urls' as strings
      */
     public void articleVisits(StreamsBuilder builder) {
-
+        builder.stream("click-events", Consumed.with(strings, json))
+                .filter((key, json) -> json.path("object").path("@type").asText().equals("Article"))
+                .mapValues(json -> json.path("object").path("url").asText())
+                .to("article-urls", Produced.with(strings, strings));
     }
 
     /**
@@ -99,7 +114,10 @@ public class Exercise_1_FilterAndTransform {
      * object prices to the topic 'classified-ad-prices' as ints
      */
     public void classifiedAdPrices(StreamsBuilder builder) {
-
+        builder.stream("click-events", Consumed.with(strings, json))
+                .filter((key, json) -> json.path("object").path("@type").asText().equals("ClassifiedAd"))
+                .mapValues(json -> json.path("object").path("price").asInt())
+                .to("classified-ad-prices", Produced.with(strings, ints));
     }
 
     /**
@@ -116,7 +134,17 @@ public class Exercise_1_FilterAndTransform {
      * 'simplified-classified-ads'
      */
     public void simplifiedClassifiedAds(StreamsBuilder builder) {
+        ObjectMapper mapper = new ObjectMapper();
 
+        ValueMapper<JsonNode, JsonNode> simplifiedClassifiedAd =
+                json -> mapper.createObjectNode()
+                        .put("title", json.path("object").path("name").asText())
+                        .put("price", json.path("object").path("price").asInt());
+
+        builder.stream("click-events", Consumed.with(strings, json))
+                .filter((key, json) -> json.path("object").path("@type").asText().equals("ClassifiedAd"))
+                .mapValues(simplifiedClassifiedAd)
+                .to("simplified-classified-ads", Produced.with(strings, json));
     }
 
     private ObjectMapper mapper = new ObjectMapper();
@@ -138,10 +166,23 @@ public class Exercise_1_FilterAndTransform {
      * Can you think of more than one way to solve it?
      */
     public void splitArticlesAndAds(StreamsBuilder builder) {
+        KStream<String, JsonNode> clicks = builder.stream("click-events", Consumed.with(strings, json));
 
+        KStream<String, JsonNode>[] branches = clicks.branch(
+                objectType("Article"),
+                objectType("ClassifiedAd")
+        );
+
+        branches[0].to("articles", Produced.with(strings, json));
+        branches[1].to("classified-ads", Produced.with(strings, json));
+
+        /*
+        clicks.filter(objectType("Article")).to(strings, json, "articles");
+        clicks.filter(objectType("ClassifiedAd")).to(strings, json, "classified-ads");
+        */
     }
 
-    public Predicate<String, JsonNode> objectType(String type) {
+    public static Predicate<String, JsonNode> objectType(String type) {
         return (key, json) -> json.path("object").path("@type").asText().equals(type);
     }
 
@@ -154,7 +195,9 @@ public class Exercise_1_FilterAndTransform {
      * parsing and error handling.
      */
     public void filterOutInvalidJson(StreamsBuilder builder) {
-
+        builder.stream("click-events", Consumed.with(strings, strings))
+                .flatMapValues(event -> tryParseJson(event))
+                .to("json-events", Produced.with(strings, json));
     }
 
     public Iterable<JsonNode> tryParseJson(String event) {

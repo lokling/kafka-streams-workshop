@@ -15,6 +15,8 @@ import org.apache.kafka.streams.kstream.TimeWindows;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
+import static kafkastreams.javaexercises.Exercise_1_FilterAndTransform.objectType;
+
 public class Exercise_2_Aggregations {
 
     private Serde<String> strings = Serdes.String();
@@ -27,7 +29,21 @@ public class Exercise_2_Aggregations {
      * each color. Write the result to the topic 'color-counts'.
      */
     public void countColorOccurrences(StreamsBuilder builder) {
+        builder.stream("colors", Consumed.with(strings, strings))
+                .groupBy((key, color) -> color, Serialized.with(strings, strings))
+                .count()
+                .toStream()
+                .to("color-counts", Produced.with(strings, longs));
 
+        /* Alternatively
+
+        builder.stream("colors", Consumed.with(strings, strings))
+                .map((key, color) -> KeyValue.pair(color, 1))
+                .groupByKey(Serialized.with(strings, ints))
+                .count()
+                .toStream()
+                .to("color-counts", Produced.with(strings, longs));
+         */
     }
 
     /**
@@ -36,7 +52,24 @@ public class Exercise_2_Aggregations {
      * 'word-counts'.
      */
     public void countWordOccurrences(StreamsBuilder builder) {
+        builder.stream("hamlet", Consumed.with(strings, strings))
+                .flatMapValues(line -> Arrays.asList(line.split(" ")))
+                .mapValues(word -> word.toLowerCase())
+                .groupBy((k, word) -> word, Serialized.with(strings, strings))
+                .count()
+                .toStream()
+                .to("word-counts", Produced.with(strings, longs));
 
+        /* Alternatively
+
+        builder.stream("hamlet", Consumed.with(strings, strings))
+                .flatMapValues(line -> Arrays.asList(line.split(" ")))
+                .map((key, word) -> KeyValue.pair(word.toLowerCase(), 1))
+                .groupByKey(Serialized.with(strings, ints))
+                .count()
+                .toStream()
+                .to("word-counts", Produced.with(strings, longs));
+         */
     }
 
     /**
@@ -45,7 +78,22 @@ public class Exercise_2_Aggregations {
      * 'clicks-per-site'.
      */
     public void clicksPerSite(StreamsBuilder builder) {
+        builder.stream("click-events", Consumed.with(strings, json))
+                .selectKey((key, json) -> json.path("provider").path("@id").asText())
+                .groupByKey(Serialized.with(strings, json))
+                .count()
+                .toStream()
+                .to("clicks-per-site", Produced.with(strings, longs));
 
+        /* Alternatively
+
+        builder.stream("click-events", Consumed.with(strings, json))
+                .map((key, json) -> KeyValue.pair(json.path("provider").path("@id").asText(), 1))
+                .groupByKey(Serialized.with(strings, ints))
+                .count()
+                .toStream()
+                .to("clicks-per-site", Produced.with(strings, longs));
+         */
     }
 
     /**
@@ -56,7 +104,16 @@ public class Exercise_2_Aggregations {
      * Hint: Use method 'reduce' on the grouped stream.
      */
     public void totalClassifiedsPricePerSite(StreamsBuilder builder) {
-
+        builder.stream("click-events", Consumed.with(strings, json))
+                .filter(objectType("ClassifiedAd"))
+                .map((key, json) -> KeyValue.pair(
+                        json.path("provider").path("@id").asText(),
+                        json.path("object").path("price").asInt()
+                ))
+                .groupByKey(Serialized.with(strings, ints))
+                .reduce((a, b) -> a + b)
+                .toStream()
+                .to("total-classifieds-price-per-site", Produced.with(strings, ints));
     }
 
     /**
@@ -65,7 +122,11 @@ public class Exercise_2_Aggregations {
      * the state store 'clicks-per-hour'.
      */
     public void clicksPerHour(StreamsBuilder builder) {
-
+        builder.stream("click-events", Consumed.with(strings, json))
+                .selectKey((key, json) -> json.path("provider").path("@id").asText())
+                .groupByKey(Serialized.with(strings, json))
+                .windowedBy(TimeWindows.of(TimeUnit.HOURS.toMillis(1)))
+                .count(Materialized.as("clicks-per-hour"));
     }
 
 }
