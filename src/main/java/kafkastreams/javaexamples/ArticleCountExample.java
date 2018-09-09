@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import kafkastreams.serdes.JsonNodeSerde;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.Consumed;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
@@ -16,8 +15,8 @@ public class ArticleCountExample extends KafkaStreamsApp {
     }
 
     public Topology createTopology(StreamsBuilder builder) {
-        Serde<String> strings = new Serdes.StringSerde();
-        Serde<Long> longs = new Serdes.LongSerde();
+        Serde<String> strings = Serdes.String();
+        Serde<Long> longs = Serdes.Long();
         JsonNodeSerde json = new JsonNodeSerde();
 
         KStream<String, JsonNode> articles = builder.stream("Articles", Consumed.with(strings, json));
