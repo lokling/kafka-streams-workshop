@@ -13,17 +13,17 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
   val json = new JsonNodeSerde
 
   val input = List(
-    "Welcome to JFokus 2018!",
-    "February 5-7, 2018 Stockholm",
-    "Sweden's largest developer conference",
-    "Located at the Stockholm Waterfront conference centre"
+    "Welcome to JavaZone 2018!",
+    "September 11-13, 2018 Oslo",
+    "Europe's biggest community-driven developer conference",
+    "Located at the Oslo Spektrum conference centre"
   ).map((null, _))
 
   test("Events should flow directly through the Kafka Streams topology") {
     val expected = input
 
     val result = MockedStreams()
-      .topology(builder => exercise1.passEventsThroughDirectly(builder))
+      .topology(builder => exercise1.passEventsThroughDirectly(toBuilder(builder)))
       .input("text", strings, strings, input)
       .output("pass-through", strings, strings, expected.size)
 
@@ -31,10 +31,10 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
   }
 
   test("Get length of lines") {
-    val expected = List(23, 28, 37, 53)
+    val expected = List(25, 26, 54, 46)
 
     val result = MockedStreams()
-      .topology(builder => exercise1.lineLengths(builder))
+      .topology(builder => exercise1.lineLengths(toBuilder(builder)))
       .input("text", strings, strings, input)
       .output("line-lengths", strings, ints, expected.size)
 
@@ -42,10 +42,10 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
   }
 
   test("Get the number of words per line") {
-    val expected = List(4, 4, 4, 7)
+    val expected = List(4, 4, 5, 7)
 
     val result = MockedStreams()
-      .topology(builder => exercise1.wordsPerLine(builder))
+      .topology(builder => exercise1.wordsPerLine(toBuilder(builder)))
       .input("text", strings, strings, input)
       .output("words-per-line", strings, ints, expected.size)
 
@@ -54,12 +54,12 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
 
   test("Get the lines containing 'conference'") {
     val expected = List(
-      "Sweden's largest developer conference",
-      "Located at the Stockholm Waterfront conference centre"
+      "Europe's biggest community-driven developer conference",
+      "Located at the Oslo Spektrum conference centre"
     )
 
     val result = MockedStreams()
-      .topology(builder => exercise1.linesContainingConference(builder))
+      .topology(builder => exercise1.linesContainingConference(toBuilder(builder)))
       .input("text", strings, strings, input)
       .output("contains-conference", strings, strings, expected.size)
 
@@ -68,14 +68,14 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
 
   test("Get all the words") {
     val expected = List(
-      "Welcome", "to", "JFokus", "2018!",
-      "February", "5-7,", "2018", "Stockholm",
-      "Sweden's", "largest", "developer", "conference",
-      "Located", "at", "the", "Stockholm", "Waterfront", "conference", "centre"
+      "Welcome", "to", "JavaZone", "2018!",
+      "September", "11-13,", "2018", "Oslo",
+      "Europe's", "biggest", "community-driven", "developer", "conference",
+      "Located", "at", "the", "Oslo", "Spektrum", "conference", "centre"
     )
 
     val result = MockedStreams()
-      .topology(builder => exercise1.allTheWords(builder))
+      .topology(builder => exercise1.allTheWords(toBuilder(builder)))
       .input("text", strings, strings, input)
       .output("all-the-words", strings, strings, expected.size)
 
@@ -94,7 +94,7 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
     )
 
     val result = MockedStreams()
-      .topology(builder => exercise1.urlsVisited(builder))
+      .topology(builder => exercise1.urlsVisited(toBuilder(builder)))
       .input("click-events", strings, json, clickEvents)
       .output("urls-visited", strings, strings, expected.size)
 
@@ -105,7 +105,7 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
     val expected = List(clickEvents(1), clickEvents(4))
 
     val result = MockedStreams()
-      .topology(builder => exercise1.articles(builder))
+      .topology(builder => exercise1.articles(toBuilder(builder)))
       .input("click-events", strings, json, clickEvents)
       .output("articles", strings, json, expected.size)
 
@@ -119,7 +119,7 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
     )
 
     val result = MockedStreams()
-      .topology(builder => exercise1.articleVisits(builder))
+      .topology(builder => exercise1.articleVisits(toBuilder(builder)))
       .input("click-events", strings, json, clickEvents)
       .output("article-urls", strings, strings, expected.size)
 
@@ -130,7 +130,7 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
     val expected = List(1500, 23000, 1, 198, 500)
 
     val result = MockedStreams()
-      .topology(builder => exercise1.classifiedAdPrices(builder))
+      .topology(builder => exercise1.classifiedAdPrices(toBuilder(builder)))
       .input("click-events", strings, json, clickEvents)
       .output("classified-ad-prices", strings, ints, expected.size)
 
@@ -148,7 +148,7 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
     ).map(mapper.readTree)
 
     val result = MockedStreams()
-      .topology(builder => exercise1.simplifiedClassifiedAds(builder))
+      .topology(builder => exercise1.simplifiedClassifiedAds(toBuilder(builder)))
       .input("click-events", strings, json, clickEvents)
       .output("simplified-classified-ads", strings, json, expected.size)
 
@@ -160,7 +160,7 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
     val expectedAds = List(clickEvents(0), clickEvents(2), clickEvents(3), clickEvents(5), clickEvents(6))
 
     val streams = MockedStreams()
-      .topology(builder => exercise1.splitArticlesAndAds(builder))
+      .topology(builder => exercise1.splitArticlesAndAds(toBuilder(builder)))
       .input("click-events", strings, json, clickEvents)
 
     val articles = streams.output("articles", strings, json, expectedArticles.size)
@@ -175,7 +175,7 @@ class Exercise_1_FilterAndTransformTest extends ExerciseBase {
     val input = (null, "invalid json") :: clickEvents.map { case (k, v) => (k, v.toString) }
 
     val result =  MockedStreams()
-      .topology(builder => exercise1.filterOutInvalidJson(builder))
+      .topology(builder => exercise1.filterOutInvalidJson(toBuilder(builder)))
       .input("click-events", strings, strings, input)
       .output("json-events", strings, json, expected.size)
 

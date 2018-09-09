@@ -1,8 +1,8 @@
 package kafkastreams.examples
 
 import com.madewithtea.mockedstreams.MockedStreams
-//import kafkastreams.javaexamples.HelloKafkaStreams
-import kafkastreams.scalaexamples.HelloKafkaStreams
+import kafkastreams.javaexamples.HelloKafkaStreams
+//import kafkastreams.scalaexamples.HelloKafkaStreams
 import org.apache.kafka.common.serialization.Serdes.StringSerde
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -11,8 +11,8 @@ class HelloKafkaStreamsTest extends FlatSpec with Matchers {
   val strings = new StringSerde
 
   "The Hello World application" should "send greetings to 'hello' topic" in {
-    val input = List("" -> "JFokus")
-    val expected = List("" -> "Hello, JFokus!")
+    val input = List("" -> "JavaZone")
+    val expected = List("" -> "Hello, JavaZone!")
 
     MockedStreams()
       .topology(new HelloKafkaStreams().createTopology)
